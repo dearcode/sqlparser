@@ -1024,15 +1024,15 @@ table_opt_value:
 alter_statement:
   ALTER ignore_opt TABLE table_name non_add_drop_or_rename_operation force_eof
   {
-    $$ = &DDL{Action: AlterStr, Table: $4, NewName: $4}
+    $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
 | ALTER ignore_opt TABLE table_name ADD alter_object_type force_eof
   {
-    $$ = &DDL{Action: AlterStr, Table: $4, NewName: $4}
+    $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
 | ALTER ignore_opt TABLE table_name DROP alter_object_type force_eof
   {
-    $$ = &DDL{Action: AlterStr, Table: $4, NewName: $4}
+    $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
 | ALTER ignore_opt TABLE table_name ADD VINDEX sql_id '(' column_list ')' vindex_type_opt vindex_params_opt
   {
@@ -1065,15 +1065,15 @@ alter_statement:
 | ALTER ignore_opt TABLE table_name RENAME index_opt force_eof
   {
     // Rename an index can just be an alter
-    $$ = &DDL{Action: AlterStr, Table: $4, NewName: $4}
+    $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
 | ALTER VIEW table_name ddl_force_eof
   {
-    $$ = &DDL{Action: AlterStr, Table: $3.ToViewName(), NewName: $3.ToViewName()}
+    $$ = &DDL{Action: AlterTableStr, Table: $3.ToViewName(), NewName: $3.ToViewName()}
   }
 | ALTER ignore_opt TABLE table_name partition_operation
   {
-    $$ = &DDL{Action: AlterStr, Table: $4, PartitionSpec: $5}
+    $$ = &DDL{Action: AlterTableStr, Table: $4, PartitionSpec: $5}
   }
 
 alter_object_type:
@@ -1137,7 +1137,7 @@ drop_statement:
 | DROP INDEX ID ON table_name ddl_force_eof
   {
     // Change this to an alter statement
-    $$ = &DDL{Action: AlterStr, Table: $5, NewName: $5}
+    $$ = &DDL{Action: AlterTableStr, Table: $5, NewName: $5}
   }
 | DROP VIEW exists_opt table_name ddl_force_eof
   {

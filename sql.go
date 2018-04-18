@@ -3335,19 +3335,19 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		//line sql.y:1026
 		{
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
 		}
 	case 164:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		//line sql.y:1030
 		{
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
 		}
 	case 165:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		//line sql.y:1034
 		{
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
 		}
 	case 166:
 		yyDollar = yyS[yypt-12 : yypt+1]
@@ -3388,19 +3388,19 @@ yydefault:
 		//line sql.y:1066
 		{
 			// Rename an index can just be an alter
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[4].tableName, NewName: yyDollar[4].tableName}
 		}
 	case 170:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		//line sql.y:1071
 		{
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[3].tableName.ToViewName(), NewName: yyDollar[3].tableName.ToViewName()}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[3].tableName.ToViewName(), NewName: yyDollar[3].tableName.ToViewName()}
 		}
 	case 171:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		//line sql.y:1075
 		{
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[4].tableName, PartitionSpec: yyDollar[5].partSpec}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[4].tableName, PartitionSpec: yyDollar[5].partSpec}
 		}
 	case 183:
 		yyDollar = yyS[yypt-7 : yypt+1]
@@ -3459,7 +3459,7 @@ yydefault:
 		//line sql.y:1138
 		{
 			// Change this to an alter statement
-			yyVAL.statement = &DDL{Action: AlterStr, Table: yyDollar[5].tableName, NewName: yyDollar[5].tableName}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[5].tableName, NewName: yyDollar[5].tableName}
 		}
 	case 192:
 		yyDollar = yyS[yypt-5 : yypt+1]

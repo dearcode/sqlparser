@@ -617,6 +617,7 @@ const (
 	CreateStr         = "create"
 	CreateDatabaseStr = "create database"
 	AlterStr          = "alter"
+	AlterTableStr     = "alter table"
 	DropStr           = "drop"
 	DropDatabaseStr   = "drop database"
 	RenameStr         = "rename"
@@ -663,6 +664,12 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 			buf.Myprintf("%s table %v %v", node.Action, node.Table, node.PartitionSpec)
 		} else {
 			buf.Myprintf("%s table %v", node.Action, node.Table)
+		}
+	case AlterTableStr:
+		if node.PartitionSpec != nil {
+			buf.Myprintf("%s %v %v", node.Action, node.Table, node.PartitionSpec)
+		} else {
+			buf.Myprintf("%s %v", node.Action, node.Table)
 		}
 	case CreateVindexStr:
 		buf.Myprintf("%s %v %v", node.Action, node.VindexSpec.Name, node.VindexSpec)
