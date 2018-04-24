@@ -3381,7 +3381,7 @@ yydefault:
 		//line sql.y:1061
 		{
 			// Change this to a rename statement
-			yyVAL.statement = &DDL{Action: RenameStr, Table: yyDollar[4].tableName, NewName: yyDollar[7].tableName}
+			yyVAL.statement = &DDL{Action: AlterTableStr, Table: yyDollar[4].tableName, NewName: yyDollar[7].tableName}
 		}
 	case 169:
 		yyDollar = yyS[yypt-7 : yypt+1]

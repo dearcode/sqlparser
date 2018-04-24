@@ -1060,7 +1060,7 @@ alter_statement:
 | ALTER ignore_opt TABLE table_name RENAME to_opt table_name
   {
     // Change this to a rename statement
-    $$ = &DDL{Action: RenameStr, Table: $4, NewName: $7}
+    $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $7}
   }
 | ALTER ignore_opt TABLE table_name RENAME index_opt force_eof
   {
