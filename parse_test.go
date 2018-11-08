@@ -1248,7 +1248,7 @@ func TestCaseSensitivity(t *testing.T) {
 		input:  "alter table A rename to B",
 		output: "alter table A",
 	}, {
-		input: "rename table A to B",
+		input:  "rename table A to B",
 		output: "rename table A to B",
 	}, {
 		input:  "drop table B",

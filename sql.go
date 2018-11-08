@@ -4,6 +4,7 @@ package sqlparser
 import __yyfmt__ "fmt"
 
 //line sql.y:18
+
 func setParseTree(yylex interface{}, stmt Statement) {
 	yylex.(*Tokenizer).ParseTree = stmt
 }
@@ -3446,7 +3447,7 @@ yydefault:
 			if yyDollar[3].byt != 0 {
 				exists = true
 			}
-			yyVAL.statement = &DDL{Action: DropStr, Table: yyDollar[4].tableName, IfExists: exists}
+			yyVAL.statement = &DDL{Action: DropTableStr, Table: yyDollar[4].tableName, IfExists: exists}
 		}
 	case 190:
 		yyDollar = yyS[yypt-5 : yypt+1]
@@ -3469,7 +3470,7 @@ yydefault:
 			if yyDollar[3].byt != 0 {
 				exists = true
 			}
-			yyVAL.statement = &DDL{Action: DropStr, Table: yyDollar[4].tableName.ToViewName(), IfExists: exists}
+			yyVAL.statement = &DDL{Action: DropViewStr, Table: yyDollar[4].tableName.ToViewName(), IfExists: exists}
 		}
 	case 193:
 		yyDollar = yyS[yypt-3 : yypt+1]

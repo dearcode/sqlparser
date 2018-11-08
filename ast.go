@@ -618,7 +618,8 @@ const (
 	CreateDatabaseStr = "create database"
 	AlterStr          = "alter"
 	AlterTableStr     = "alter table"
-	DropStr           = "drop"
+	DropTableStr      = "drop table"
+	DropViewStr       = "drop view"
 	DropDatabaseStr   = "drop database"
 	RenameStr         = "rename"
 	TruncateStr       = "truncate"
@@ -645,13 +646,7 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 		} else {
 			buf.Myprintf("%s %v %s", node.Action, node.Table.Qualifier, node.TableSpec.Options)
 		}
-	case DropStr:
-		exists := ""
-		if node.IfExists {
-			exists = " if exists"
-		}
-		buf.Myprintf("%s table%s %v", node.Action, exists, node.Table)
-	case DropDatabaseStr:
+	case DropTableStr, DropViewStr, DropDatabaseStr:
 		exists := ""
 		if node.IfExists {
 			exists = " if exists"

@@ -1128,7 +1128,7 @@ drop_statement:
     if $3 != 0 {
       exists = true
     }
-    $$ = &DDL{Action: DropStr, Table: $4, IfExists: exists}
+    $$ = &DDL{Action: DropTableStr, Table: $4, IfExists: exists}
   }
 | DROP DATABASE exists_opt ID ddl_force_eof
   {
@@ -1145,7 +1145,7 @@ drop_statement:
         if $3 != 0 {
           exists = true
         }
-    $$ = &DDL{Action: DropStr, Table: $4.ToViewName(), IfExists: exists}
+    $$ = &DDL{Action: DropViewStr, Table: $4.ToViewName(), IfExists: exists}
   }
 
 truncate_statement:
