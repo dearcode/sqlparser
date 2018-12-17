@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
+	"unicode"
 
 	log "github.com/golang/glog"
 
@@ -121,12 +122,12 @@ func SplitStatement(blob string) (string, string, error) {
 func Split(blob string) (stmts []string, err error) {
 	tokenizer := NewStringTokenizer(blob)
 	var idx int
-	tkn := 1
 
-	for tkn != 0 && tkn != eofChar {
+	for tkn := 1; tkn != 0 && tkn != eofChar; {
 		if tkn, _ = tokenizer.Scan(); tkn == ';' {
 			stmts = append(stmts, blob[idx:tokenizer.Position-2])
-			idx = tokenizer.Position
+			for idx = tokenizer.Position - 1; idx < len(blob) && unicode.IsSpace(rune(blob[idx])); idx++ {
+			}
 		}
 	}
 
