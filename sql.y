@@ -542,7 +542,7 @@ vindex_param:
 create_table_prefix:
   CREATE TABLE not_exists_opt table_name
   {
-    $$ = &DDL{Action: CreateStr, NewName: $4}
+    $$ = &DDL{Action: CreateTableStr, NewName: $4}
     setDDL(yylex, $$)
   }
 

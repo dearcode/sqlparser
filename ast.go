@@ -633,6 +633,7 @@ type DDL struct {
 // DDL strings.
 const (
 	CreateStr         = "create"
+	CreateTableStr    = "create table"
 	CreateDatabaseStr = "create database"
 	AlterStr          = "alter"
 	AlterTableStr     = "alter table"
