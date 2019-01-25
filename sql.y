@@ -545,6 +545,11 @@ create_table_prefix:
     $$ = &DDL{Action: CreateTableStr, NewName: $4}
     setDDL(yylex, $$)
   }
+ | CREATE TABLE not_exists_opt table_name LIKE table_name
+  {
+    $$ = &DDL{Action: CreateTableStr, NewName: $4, Table: $6}
+    setDDL(yylex, $$)
+  }
 
 table_spec:
   '(' table_column_list ')' table_option_list
