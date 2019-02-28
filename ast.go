@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -653,6 +655,12 @@ const (
 // Format formats the node.
 func (node *DDL) Format(buf *TrackedBuffer) {
 	switch node.Action {
+	case CreateTableStr:
+		if node.TableSpec == nil {
+			buf.Myprintf("%s %v", node.Action, node.NewName)
+		} else {
+			buf.Myprintf("%s %v %v", node.Action, node.NewName, node.TableSpec)
+		}
 	case CreateStr:
 		if node.TableSpec == nil {
 			buf.Myprintf("%s table %v", node.Action, node.NewName)
@@ -791,11 +799,68 @@ func (node *PartitionDefinition) WalkSubtree(visit Visit) error {
 	)
 }
 
+type TableOption struct {
+	Engine        *string
+	Charset       *string
+	Comment       *string
+	AutoIncrement *int64
+}
+
 // TableSpec describes the structure of a table from a CREATE TABLE statement
 type TableSpec struct {
 	Columns []*ColumnDefinition
 	Indexes []*IndexDefinition
 	Options string
+	Option  TableOption
+}
+
+//IntegerPtr bytes to *int64.
+func IntegerPtr(b []byte) *int64 {
+	i, _ := strconv.ParseInt(string(b), 10, len(b)*8)
+	return &i
+}
+
+//StringPtr bytes to *string.
+func StringPtr(b []byte) *string {
+	s := string(b)
+	return &s
+}
+
+//Merge merge table options.
+func (o TableOption) Merge(n TableOption) TableOption {
+	if n.Engine != nil {
+		o.Engine = n.Engine
+	}
+
+	if n.Charset != nil {
+		o.Charset = n.Charset
+	}
+
+	if n.Comment != nil {
+		o.Comment = n.Comment
+	}
+
+	if n.AutoIncrement != nil {
+		o.AutoIncrement = n.AutoIncrement
+	}
+
+	return o
+}
+
+func (o TableOption) Format(buf *TrackedBuffer) {
+	//ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8;
+	if o.Engine != nil {
+		buf.Myprintf(" ENGINE=%s", *o.Engine)
+	}
+
+	if o.AutoIncrement != nil {
+		fmt.Fprintf(buf, " AUTO_INCREMENT=%v", *o.AutoIncrement)
+	}
+
+	if o.Charset != nil {
+		buf.Myprintf(" DEFAULT CHARSET=%s", *o.Charset)
+	}
+
 }
 
 // Format formats the node.
@@ -812,7 +877,9 @@ func (ts *TableSpec) Format(buf *TrackedBuffer) {
 		buf.Myprintf(",\n\t%v", idx)
 	}
 
-	buf.Myprintf("\n)%s", strings.Replace(ts.Options, ", ", ",\n  ", -1))
+	buf.Myprintf("\n)")
+
+	ts.Option.Format(buf)
 }
 
 // AddColumn appends the given column to the list in the spec

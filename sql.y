@@ -92,7 +92,8 @@ func forceEOF(yylex interface{}) {
   tableIdent    TableIdent
   convertType   *ConvertType
   aliasedTableName *AliasedTableExpr
-  TableSpec  *TableSpec
+  TableSpec     *TableSpec
+  TableOption   TableOption
   columnType    ColumnType
   colKeyOpt     ColumnKeyOption
   optVal        *SQLVal
@@ -110,7 +111,7 @@ func forceEOF(yylex interface{}) {
 }
 
 %token LEX_ERROR
-%left <bytes> UNION
+%left <bytes> UNION 
 %token <bytes> SELECT STREAM INSERT UPDATE DELETE FROM WHERE GROUP HAVING ORDER BY LIMIT OFFSET FOR
 %token <bytes> ALL DISTINCT AS EXISTS ASC DESC INTO DUPLICATE KEY DEFAULT SET LOCK KEYS
 %token <bytes> VALUES LAST_INSERT_ID
@@ -119,7 +120,7 @@ func forceEOF(yylex interface{}) {
 %left <bytes> JOIN STRAIGHT_JOIN LEFT RIGHT INNER OUTER CROSS NATURAL USE FORCE
 %left <bytes> ON USING
 %token <empty> '(' ',' ')'
-%token <bytes> ID HEX STRING INTEGRAL FLOAT HEXNUM VALUE_ARG LIST_ARG COMMENT COMMENT_KEYWORD BIT_LITERAL
+%token <bytes> HEX STRING INTEGRAL FLOAT HEXNUM VALUE_ARG LIST_ARG COMMENT COMMENT_KEYWORD BIT_LITERAL
 %token <bytes> NULL TRUE FALSE
 
 // Precedence dictated by mysql. But the vitess grammar is simplified.
@@ -154,7 +155,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> SHOW DESCRIBE EXPLAIN DATE ESCAPE REPAIR OPTIMIZE TRUNCATE
 %token <bytes> MAXVALUE PARTITION REORGANIZE LESS THAN PROCEDURE TRIGGER
 %token <bytes> VINDEX VINDEXES
-%token <bytes> STATUS VARIABLES
+%token <bytes> ENGINE STATUS VARIABLES
 
 // Transaction Tokens
 %token <bytes> BEGIN START TRANSACTION COMMIT ROLLBACK
@@ -188,7 +189,7 @@ func forceEOF(yylex interface{}) {
 %token <bytes> MATCH AGAINST BOOLEAN LANGUAGE WITH QUERY EXPANSION
 
 // MySQL reserved words that are unused by this grammar will map to this token.
-%token <bytes> UNUSED
+%token <bytes> ID UNUSED
 
 %type <statement> command
 %type <selStmt> select_statement base_select union_lhs union_rhs
@@ -271,7 +272,8 @@ func forceEOF(yylex interface{}) {
 %type <indexDefinition> index_definition
 %type <str> index_or_key
 %type <TableSpec> table_spec table_column_list
-%type <str> table_option_list table_option table_opt_value
+%type <str> table_opt_value 
+%type <TableOption> table_option table_option_list
 %type <indexInfo> index_info
 %type <indexColumn> index_column
 %type <indexColumns> index_column_list
@@ -473,7 +475,7 @@ create_statement:
   }
 | CREATE DATABASE not_exists_opt ID table_option_list
   {
-    $$ = &DDL{Action: CreateDatabaseStr, Table: TableName{Qualifier:TableIdent{string($4)}}, TableSpec:&TableSpec{Options:$5}}
+    $$ = &DDL{Action: CreateDatabaseStr, Table: TableName{Qualifier:TableIdent{string($4)}}, TableSpec:&TableSpec{Option:$5}}
   }
 | CREATE constraint_opt INDEX ID using_opt ON table_name ddl_force_eof
   {
@@ -555,7 +557,7 @@ table_spec:
   '(' table_column_list ')' table_option_list
   {
     $$ = $2
-    $$.Options = $4
+    $$.Option = $4
   }
 
 table_column_list:
@@ -938,6 +940,10 @@ index_definition:
   {
     $$ = &IndexDefinition{Info: $1, Columns: $3, Using: $5}
   }
+|  index_info using_opt '(' index_column_list ')' 
+  {
+    $$ = &IndexDefinition{Info: $1, Columns: $4, Using: $2}
+  }
 
 index_info:
   PRIMARY KEY
@@ -984,46 +990,64 @@ index_column:
   }
 
 table_option_list:
-  {
-    $$ = ""
-  }
-| table_option
-  {
-    $$ = " " + string($1)
-  }
-| table_option_list ',' table_option
-  {
-    $$ = string($1) + ", " + string($3)
-  }
-
-// rather than explicitly parsing the various keywords for table options,
-// just accept any number of keywords, IDs, strings, numbers, and '='
-table_option:
-  table_opt_value
+ table_option
   {
     $$ = $1
   }
-| table_option table_opt_value
+ | table_option_list table_option 
   {
-    $$ = $1 + " " + $2
+    $$ = $1.Merge($2)
   }
-| table_option '=' table_opt_value
+
+
+table_option:
+AUTO_INCREMENT ID
+{
+    $$ = TableOption{AutoIncrement: IntegerPtr($2)}
+
+}
+|AUTO_INCREMENT '=' INTEGRAL
+{
+    $$ = TableOption{AutoIncrement: IntegerPtr($3)}
+}
+|  ENGINE ID 
+{
+    $$ = TableOption{Engine:StringPtr($2)}
+}
+|  ENGINE '=' ID 
   {
-    $$ = $1 + "=" + $3
+    $$ = TableOption{Engine:StringPtr($3)}
   }
+| DEFAULT CHARSET '=' ID 
+  {
+    $$ = TableOption{Charset:StringPtr($4)}
+  }
+|  CHARSET '=' ID
+  {
+    $$ = TableOption{Charset:StringPtr($3)}
+  }
+|  COMMENT_KEYWORD STRING
+  {
+    $$ = TableOption{Comment:StringPtr($2)}
+  }
+|  COMMENT_KEYWORD '=' STRING
+  {
+    $$ = TableOption{Comment:StringPtr($3)}
+  }
+  
 
 table_opt_value:
   reserved_sql_id
   {
-    $$ = $1.String()
+    $$ = " <<<" + $1.String() + ">>> "
   }
 | STRING
   {
-    $$ = "'" + string($1) + "'"
+    $$ = "'" + string($1) + "' ccccccccccccccccccc"
   }
 | INTEGRAL
   {
-    $$ = string($1)
+    $$ = string($1) + "ddddddddddddddddddddd"
   }
 
 alter_statement:
@@ -2840,6 +2864,7 @@ non_reserved_keyword:
 | SMALLINT
 | SPATIAL
 | START
+| ENGINE
 | STATUS
 | TEXT
 | THAN
