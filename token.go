@@ -127,6 +127,7 @@ var keywords = map[string]int{
 	"current_date":        CURRENT_DATE,
 	"current_time":        CURRENT_TIME,
 	"current_timestamp":   CURRENT_TIMESTAMP,
+	"now":                 NOW,
 	"current_user":        UNUSED,
 	"cursor":              UNUSED,
 	"database":            DATABASE,
@@ -150,6 +151,7 @@ var keywords = map[string]int{
 	"distinctrow":         UNUSED,
 	"div":                 DIV,
 	"double":              DOUBLE,
+	"precision":           UNUSED,
 	"drop":                DROP,
 	"duplicate":           DUPLICATE,
 	"each":                UNUSED,
@@ -262,7 +264,6 @@ var keywords = map[string]int{
 	"outer":               OUTER,
 	"outfile":             UNUSED,
 	"partition":           PARTITION,
-	"precision":           UNUSED,
 	"primary":             PRIMARY,
 	"procedure":           PROCEDURE,
 	"query":               QUERY,
@@ -318,7 +319,6 @@ var keywords = map[string]int{
 	"engine":              ENGINE,
 	"stored":              UNUSED,
 	"straight_join":       STRAIGHT_JOIN,
-	"stream":              STREAM,
 	"table":               TABLE,
 	"tables":              TABLES,
 	"terminated":          UNUSED,
@@ -398,7 +398,7 @@ func KeywordString(id int) string {
 // This function is used by go yacc.
 func (tkn *Tokenizer) Lex(lval *yySymType) int {
 	typ, val := tkn.Scan()
-	for typ == COMMENT {
+    for typ == COMMENT {
 		if tkn.AllowComments {
 			break
 		}
@@ -453,11 +453,13 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 				return tkn.scanBitLiteral()
 			}
 		}
-		return tkn.scanIdentifier(byte(ch))
-	case isDigit(ch):
-		return tkn.scanNumber(false)
+		return tkn.scanIdentifier([]byte{byte(ch)})
 	case ch == ':':
 		return tkn.scanBindVar()
+
+	case isDigit(ch):
+		return tkn.scanNumber(false, false)
+
 	case ch == ';' && tkn.multi:
 		return 0, nil
 	default:
@@ -486,7 +488,7 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 			return VALUE_ARG, buf.Bytes()
 		case '.':
 			if isDigit(tkn.lastChar) {
-				return tkn.scanNumber(true)
+				return tkn.scanNumber(true, false)
 			}
 			return int(ch), nil
 		case '/':
@@ -514,6 +516,8 @@ func (tkn *Tokenizer) Scan() (int, []byte) {
 					return JSON_UNQUOTE_EXTRACT_OP, nil
 				}
 				return JSON_EXTRACT_OP, nil
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				return tkn.scanNumber(false, true)
 			}
 			return int(ch), nil
 		case '<':
@@ -580,13 +584,14 @@ func (tkn *Tokenizer) skipBlank() {
 	}
 }
 
-func (tkn *Tokenizer) scanIdentifier(firstByte byte) (int, []byte) {
-	buffer := &bytes2.Buffer{}
-	buffer.WriteByte(firstByte)
+func (tkn *Tokenizer) scanIdentifier(lastBytes []byte) (int, []byte) {
+	buffer := bytes2.NewBuffer(lastBytes)
+
 	for isLetter(tkn.lastChar) || isDigit(tkn.lastChar) {
 		buffer.WriteByte(byte(tkn.lastChar))
 		tkn.next()
 	}
+
 	lowered := bytes.ToLower(buffer.Bytes())
 	loweredStr := string(lowered)
 	if keywordID, found := keywords[loweredStr]; found {
@@ -596,6 +601,7 @@ func (tkn *Tokenizer) scanIdentifier(firstByte byte) (int, []byte) {
 	if loweredStr == "dual" {
 		return ID, lowered
 	}
+
 	return ID, buffer.Bytes()
 }
 
@@ -625,6 +631,7 @@ func (tkn *Tokenizer) scanBitLiteral() (int, []byte) {
 func (tkn *Tokenizer) scanLiteralIdentifier() (int, []byte) {
 	buffer := &bytes2.Buffer{}
 	backTickSeen := false
+
 	for {
 		if backTickSeen {
 			if tkn.lastChar != '`' {
@@ -679,9 +686,14 @@ func (tkn *Tokenizer) scanMantissa(base int, buffer *bytes2.Buffer) {
 	}
 }
 
-func (tkn *Tokenizer) scanNumber(seenDecimalPoint bool) (int, []byte) {
+func (tkn *Tokenizer) scanNumber(seenDecimalPoint, isNegative bool) (int, []byte) {
 	token := INTEGRAL
 	buffer := &bytes2.Buffer{}
+
+	if isNegative {
+		buffer.WriteByte('-')
+	}
+
 	if seenDecimalPoint {
 		token = FLOAT
 		buffer.WriteByte('.')
@@ -721,7 +733,7 @@ exponent:
 exit:
 	// A letter cannot immediately follow a number.
 	if isLetter(tkn.lastChar) {
-		return LEX_ERROR, buffer.Bytes()
+		return tkn.scanIdentifier(buffer.Bytes())
 	}
 
 	return token, buffer.Bytes()
@@ -877,4 +889,5 @@ func digitVal(ch uint16) int {
 
 func isDigit(ch uint16) bool {
 	return '0' <= ch && ch <= '9'
+	//return '0' <= ch && ch <= '9' || ch == '-' || ch == '.'
 }

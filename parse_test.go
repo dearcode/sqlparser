@@ -807,38 +807,10 @@ var (
 		input:  "alter table a drop id",
 		output: "alter table a",
 	}, {
-		input: "alter table a add vindex hash (id)",
-	}, {
-		input:  "alter table a add vindex `hash` (`id`)",
-		output: "alter table a add vindex hash (id)",
-	}, {
-		input:  "alter table a add vindex hash (id) using `hash`",
-		output: "alter table a add vindex hash (id) using hash",
-	}, {
-		input: "alter table a add vindex `add` (`add`)",
-	}, {
-		input: "alter table a add vindex hash (id) using hash",
-	}, {
-		input:  "alter table a add vindex hash (id) using `hash`",
-		output: "alter table a add vindex hash (id) using hash",
-	}, {
-		input: "alter table user add vindex name_lookup_vdx (name) using lookup_hash with owner=user, table=name_user_idx, from=name, to=user_id",
-	}, {
-		input:  "alter table user2 add vindex name_lastname_lookup_vdx (name,lastname) using lookup with owner=`user`, table=`name_lastname_keyspace_id_map`, from=`name,lastname`, to=`keyspace_id`",
-		output: "alter table user2 add vindex name_lastname_lookup_vdx (name, lastname) using lookup with owner=user, table=name_lastname_keyspace_id_map, from=name,lastname, to=keyspace_id",
-	}, {
-		input: "alter table a drop vindex hash",
-	}, {
-		input:  "alter table a drop vindex `hash`",
-		output: "alter table a drop vindex hash",
-	}, {
-		input:  "alter table a drop vindex hash",
-		output: "alter table a drop vindex hash",
-	}, {
-		input:  "alter table a drop vindex `add`",
-		output: "alter table a drop vindex `add`",
-	}, {
 		input: "create table a",
+	}, {
+		input:  "create table a (\n\t`a843` int\n)",
+		output: "create table a (\n\ta843 int\n)",
 	}, {
 		input:  "create table a (\n\t`a` int\n)",
 		output: "create table a (\n\ta int\n)",
@@ -853,12 +825,6 @@ var (
 	}, {
 		input:  "create table a (a int, b char, c garbage)",
 		output: "create table a",
-	}, {
-		input: "create vindex hash_vdx using hash",
-	}, {
-		input: "create vindex lookup_vdx using lookup with owner=user, table=name_user_idx, from=name, to=user_id",
-	}, {
-		input: "create vindex xyz_vdx using xyz with param1=hello, param2='world', param3=123",
 	}, {
 		input:  "create index a on b",
 		output: "alter table b",
@@ -885,7 +851,7 @@ var (
 		output: "alter table a",
 	}, {
 		input:  "drop view a",
-		output: "drop table a",
+		output: "drop view a",
 	}, {
 		input:  "drop table a",
 		output: "drop table a",
@@ -894,7 +860,7 @@ var (
 		output: "drop table if exists a",
 	}, {
 		input:  "drop view if exists a",
-		output: "drop table if exists a",
+		output: "drop view if exists a",
 	}, {
 		input:  "drop index b on a",
 		output: "alter table a",
@@ -943,9 +909,6 @@ var (
 	}, {
 		input:  "show databases",
 		output: "show databases",
-	}, {
-		input:  "show engine INNODB",
-		output: "show engine",
 	}, {
 		input:  "show engines",
 		output: "show engines",
@@ -1045,12 +1008,6 @@ var (
 	}, {
 		input:  "show session variables",
 		output: "show session variables",
-	}, {
-		input:  "show vindexes",
-		output: "show vindexes",
-	}, {
-		input:  "show vindexes on t",
-		output: "show vindexes on t",
 	}, {
 		input: "show vitess_keyspaces",
 	}, {
@@ -1185,10 +1142,6 @@ var (
 	}, {
 		input: "delete from t partition (p0) where a = 1",
 	}, {
-		input: "stream * from t",
-	}, {
-		input: "stream /* comment */ * from t",
-	}, {
 		input: "begin",
 	}, {
 		input:  "start transaction",
@@ -1300,10 +1253,10 @@ func TestCaseSensitivity(t *testing.T) {
 		output: "alter table a",
 	}, {
 		input:  "drop view A",
-		output: "drop table a",
+		output: "drop view a",
 	}, {
 		input:  "drop view if exists A",
-		output: "drop table if exists a",
+		output: "drop view if exists a",
 	}, {
 		input:  "select /* lock in SHARE MODE */ 1 from t lock in SHARE MODE",
 		output: "select /* lock in SHARE MODE */ 1 from t lock in share mode",
@@ -1640,37 +1593,6 @@ func TestCreateTable(t *testing.T) {
 			"	unique key by_abc (a, b, c),\n" +
 			"	key by_email (email(10), username)\n" +
 			")",
-
-		// table options
-		"create table t (\n" +
-			"	id int auto_increment\n" +
-			") engine InnoDB,\n" +
-			"  auto_increment 123,\n" +
-			"  avg_row_length 1,\n" +
-			"  default character set utf8mb4,\n" +
-			"  character set latin1,\n" +
-			"  checksum 0,\n" +
-			"  default collate binary,\n" +
-			"  collate ascii_bin,\n" +
-			"  comment 'this is a comment',\n" +
-			"  compression 'zlib',\n" +
-			"  connection 'connect_string',\n" +
-			"  data directory 'absolute path to directory',\n" +
-			"  delay_key_write 1,\n" +
-			"  encryption 'n',\n" +
-			"  index directory 'absolute path to directory',\n" +
-			"  insert_method no,\n" +
-			"  key_block_size 1024,\n" +
-			"  max_rows 100,\n" +
-			"  min_rows 10,\n" +
-			"  pack_keys 0,\n" +
-			"  password 'sekret',\n" +
-			"  row_format default,\n" +
-			"  stats_auto_recalc default,\n" +
-			"  stats_persistent 0,\n" +
-			"  stats_sample_pages 1,\n" +
-			"  tablespace tablespace_name storage disk,\n" +
-			"  tablespace tablespace_name\n",
 	}
 	for _, sql := range validSQL {
 		sql = strings.TrimSpace(sql)
@@ -1680,7 +1602,6 @@ func TestCreateTable(t *testing.T) {
 			continue
 		}
 		got := String(tree.(*DDL))
-
 		if sql != got {
 			t.Errorf("want:\n%s\ngot:\n%s", sql, got)
 		}
@@ -1738,9 +1659,6 @@ var (
 	}, {
 		input:  "select : from t",
 		output: "syntax error at position 9 near ':'",
-	}, {
-		input:  "select 0xH from t",
-		output: "syntax error at position 10 near '0x'",
 	}, {
 		input:  "select x'78 from t",
 		output: "syntax error at position 12 near '78'",

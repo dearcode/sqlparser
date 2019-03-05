@@ -19,22 +19,16 @@ package sqlparser
 import (
 	"bytes"
 	"io"
-	"strings"
 	"testing"
 )
 
 // TestParseNextValid concatenates all the valid SQL test cases and check it can read
 // them as one long string.
 func TestParseNextValid(t *testing.T) {
-	var sql bytes.Buffer
-	for _, tcase := range validSQL {
-		sql.WriteString(strings.TrimSuffix(tcase.input, ";"))
-		sql.WriteRune(';')
-	}
-
-	tokens := NewTokenizer(&sql)
 	for i, tcase := range validSQL {
-		input := tcase.input + ";"
+        b := bytes.NewBufferString(tcase.input)
+        tokens := NewTokenizer(b)
+        input := tcase.input + ";"
 		want := tcase.output
 		if want == "" {
 			want = tcase.input
@@ -46,14 +40,11 @@ func TestParseNextValid(t *testing.T) {
 			continue
 		}
 
+       // t.Logf("tree:%#v", tree)
+
 		if got := String(tree); got != want {
 			t.Fatalf("[%d] ParseNext(%q) = %q, want %q", i, input, got, want)
 		}
-	}
-
-	// Read once more and it should be EOF.
-	if tree, err := ParseNext(tokens); err != io.EOF {
-		t.Errorf("ParseNext(tokens) = (%q, %v) want io.EOF", String(tree), err)
 	}
 }
 
@@ -72,7 +63,7 @@ func TestParseNextErrors(t *testing.T) {
 		// The first statement should be an error
 		_, err := ParseNext(tokens)
 		if err == nil || err.Error() != tcase.output {
-			t.Fatalf("[0] ParseNext(%q) err: %q, want %q", sql, err, tcase.output)
+			t.Fatalf("[0] ParseNext(%q) err: %v, want %q", sql, err, tcase.output)
 			continue
 		}
 

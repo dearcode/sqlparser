@@ -24,7 +24,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"unicode"
 
 	log "github.com/golang/glog"
 
@@ -118,23 +117,6 @@ func SplitStatement(blob string) (string, string, error) {
 		return blob[:tokenizer.Position-2], blob[tokenizer.Position-1:], nil
 	}
 	return blob, "", nil
-}
-
-// Split 直接拆分成数组.
-func Split(blob string) (stmts []string, err error) {
-	tokenizer := NewStringTokenizer(blob)
-	var idx int
-
-	for tkn := 1; tkn != 0 && tkn != eofChar; {
-		if tkn, _ = tokenizer.Scan(); tkn == ';' {
-			stmts = append(stmts, blob[idx:tokenizer.Position-2])
-			for idx = tokenizer.Position - 1; idx < len(blob) && unicode.IsSpace(rune(blob[idx])); idx++ {
-			}
-		}
-	}
-
-	err = tokenizer.LastError
-	return
 }
 
 // SQLNode defines the interface for all nodes
@@ -626,6 +608,7 @@ type DDL struct {
 	Table         TableName
 	NewName       TableName
 	IfExists      bool
+	LikeTable     TableName
 	TableSpec     *TableSpec
 	PartitionSpec *PartitionSpec
 	VindexSpec    *VindexSpec
@@ -671,14 +654,20 @@ func (node *DDL) Format(buf *TrackedBuffer) {
 		if node.TableSpec == nil {
 			buf.Myprintf("%s %v", node.Action, node.Table.Qualifier)
 		} else {
-			buf.Myprintf("%s %v %s", node.Action, node.Table.Qualifier, node.TableSpec.Options)
+			buf.Myprintf("%s %v %v", node.Action, node.Table.Qualifier, node.TableSpec.Option)
 		}
 	case DropTableStr, DropViewStr, DropDatabaseStr:
 		exists := ""
 		if node.IfExists {
 			exists = " if exists"
 		}
-		buf.Myprintf("%s%s %v", node.Action, exists, node.Table.Qualifier)
+
+		buf.Myprintf("%s%s ", node.Action, exists)
+		if !node.Table.Qualifier.IsEmpty() {
+			buf.Myprintf("%v.", node.Table.Qualifier)
+		}
+
+		buf.Myprintf("%v", node.Table.Name)
 	case RenameStr:
 		buf.Myprintf("%s table %v to %v", node.Action, node.Table, node.NewName)
 	case AlterStr:
@@ -800,10 +789,12 @@ func (node *PartitionDefinition) WalkSubtree(visit Visit) error {
 }
 
 type TableOption struct {
-	Engine        *string
-	Charset       *string
-	Comment       *string
+	Engine        []byte
+	Charset       []byte
+	Comment       []byte
 	AutoIncrement *int64
+	Common        []byte
+	Collate       []byte
 }
 
 // TableSpec describes the structure of a table from a CREATE TABLE statement
@@ -828,37 +819,43 @@ func StringPtr(b []byte) *string {
 
 //Merge merge table options.
 func (o TableOption) Merge(n TableOption) TableOption {
-	if n.Engine != nil {
-		o.Engine = n.Engine
-	}
-
-	if n.Charset != nil {
-		o.Charset = n.Charset
-	}
-
-	if n.Comment != nil {
-		o.Comment = n.Comment
-	}
+	o.Engine = append([]byte{}, n.Engine...)
+	o.Charset = append([]byte{}, n.Charset...)
+	o.Comment = append([]byte{}, n.Comment...)
+	o.Common = append(o.Common, ' ')
+	o.Common = append(o.Common, n.Common...)
+	o.Collate = append([]byte{}, n.Collate...)
 
 	if n.AutoIncrement != nil {
 		o.AutoIncrement = n.AutoIncrement
 	}
-
 	return o
 }
 
 func (o TableOption) Format(buf *TrackedBuffer) {
 	//ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8;
-	if o.Engine != nil {
-		buf.Myprintf(" ENGINE=%s", *o.Engine)
+	if len(o.Engine) > 0 {
+		buf.Myprintf("ENGINE=%s ", o.Engine)
 	}
 
 	if o.AutoIncrement != nil {
-		fmt.Fprintf(buf, " AUTO_INCREMENT=%v", *o.AutoIncrement)
+		fmt.Fprintf(buf, "AUTO_INCREMENT=%v ", *o.AutoIncrement)
 	}
 
-	if o.Charset != nil {
-		buf.Myprintf(" DEFAULT CHARSET=%s", *o.Charset)
+	if len(o.Charset) > 0 {
+		buf.Myprintf("DEFAULT CHARSET=%s ", o.Charset)
+	}
+
+	if len(o.Collate) > 0 {
+		buf.Myprintf("DEFAULT COLLATE=%s ", o.Collate)
+	}
+
+	if len(o.Comment) > 0 {
+		buf.Myprintf("Comment='%s' ", o.Comment)
+	}
+
+	if len(o.Common) > 0 {
+		buf.Myprintf("%s ", o.Common)
 	}
 
 }
@@ -866,6 +863,7 @@ func (o TableOption) Format(buf *TrackedBuffer) {
 // Format formats the node.
 func (ts *TableSpec) Format(buf *TrackedBuffer) {
 	buf.Myprintf("(\n")
+
 	for i, col := range ts.Columns {
 		if i == 0 {
 			buf.Myprintf("\t%v", col)
@@ -913,10 +911,39 @@ func (ts *TableSpec) WalkSubtree(visit Visit) error {
 	return nil
 }
 
+type columnOption struct {
+	key   string
+	value interface{}
+}
+
 // ColumnDefinition describes a column in a CREATE TABLE statement
 type ColumnDefinition struct {
-	Name ColIdent
-	Type ColumnType
+	Name    ColIdent
+	Type    ColumnType
+	options []columnOption
+}
+
+func (col *ColumnDefinition) mergeOptions() {
+	for _, opt := range col.options {
+		switch opt.key {
+		case "null_opt":
+			col.Type.NotNull = opt.value.(BoolVal)
+		case "column_default_opt":
+			col.Type.Default = opt.value.(*SQLVal)
+		case "on_update_opt":
+			col.Type.OnUpdate = opt.value.(*SQLVal)
+		case "auto_increment_opt":
+			col.Type.Autoincrement = opt.value.(BoolVal)
+		case "column_key_opt":
+			col.Type.KeyOpt = opt.value.(ColumnKeyOption)
+		case "column_comment_opt":
+			col.Type.Comment = opt.value.(*SQLVal)
+		case "charset_opt":
+			col.Type.Charset = opt.value.(string)
+		case "collate_opt":
+			col.Type.Collate = opt.value.(string)
+		}
+	}
 }
 
 // Format formats the node.
