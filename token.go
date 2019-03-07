@@ -106,7 +106,6 @@ var keywords = map[string]int{
 	"both":                UNUSED,
 	"by":                  BY,
 	"call":                UNUSED,
-	"cascade":             UNUSED,
 	"case":                CASE,
 	"cast":                CAST,
 	"change":              UNUSED,
@@ -174,6 +173,10 @@ var keywords = map[string]int{
 	"for":                 FOR,
 	"force":               FORCE,
 	"foreign":             FOREIGN,
+	"no":                  NO,
+	"action":              ACTION,
+	"references":          REFERENCES,
+	"cascade":             CASCADE,
 	"from":                FROM,
 	"fulltext":            FULLTEXT,
 	"generated":           UNUSED,
@@ -272,7 +275,6 @@ var keywords = map[string]int{
 	"reads":               UNUSED,
 	"read_write":          UNUSED,
 	"real":                REAL,
-	"references":          UNUSED,
 	"regexp":              REGEXP,
 	"release":             UNUSED,
 	"rename":              RENAME,
@@ -282,7 +284,7 @@ var keywords = map[string]int{
 	"replace":             REPLACE,
 	"require":             UNUSED,
 	"resignal":            UNUSED,
-	"restrict":            UNUSED,
+	"restrict":            RESTRICT,
 	"return":              UNUSED,
 	"revoke":              UNUSED,
 	"right":               RIGHT,
@@ -398,7 +400,7 @@ func KeywordString(id int) string {
 // This function is used by go yacc.
 func (tkn *Tokenizer) Lex(lval *yySymType) int {
 	typ, val := tkn.Scan()
-    for typ == COMMENT {
+	for typ == COMMENT {
 		if tkn.AllowComments {
 			break
 		}

@@ -801,7 +801,6 @@ type TableOption struct {
 type TableSpec struct {
 	Columns []*ColumnDefinition
 	Indexes []*IndexDefinition
-	Options string
 	Option  TableOption
 }
 
@@ -819,12 +818,12 @@ func StringPtr(b []byte) *string {
 
 //Merge merge table options.
 func (o TableOption) Merge(n TableOption) TableOption {
-	o.Engine = append([]byte{}, n.Engine...)
-	o.Charset = append([]byte{}, n.Charset...)
-	o.Comment = append([]byte{}, n.Comment...)
+	o.Engine = append(o.Engine, n.Engine...)
+	o.Charset = append(o.Charset, n.Charset...)
+	o.Comment = append(o.Comment, n.Comment...)
 	o.Common = append(o.Common, ' ')
 	o.Common = append(o.Common, n.Common...)
-	o.Collate = append([]byte{}, n.Collate...)
+	o.Collate = append(o.Collate, n.Collate...)
 
 	if n.AutoIncrement != nil {
 		o.AutoIncrement = n.AutoIncrement
@@ -1167,9 +1166,12 @@ func (ct *ColumnType) WalkSubtree(visit Visit) error {
 
 // IndexDefinition describes an index in a CREATE TABLE statement
 type IndexDefinition struct {
-	Info    *IndexInfo
-	Columns []*IndexColumn
-	Using   ColIdent
+	Info              *IndexInfo
+	Columns           []*IndexColumn
+	Using             ColIdent
+	ReferencesTable   TableName
+	ReferencesOption  ForeignOption
+	ReferencesColumns []*IndexColumn
 }
 
 // Format formats the node.
@@ -1189,6 +1191,25 @@ func (idx *IndexDefinition) Format(buf *TrackedBuffer) {
 	if !idx.Using.IsEmpty() {
 		buf.Myprintf(" USING %v", idx.Using)
 	}
+
+	if idx.Info.Foreign {
+		buf.Myprintf(" References %v(", idx.ReferencesTable)
+		for i, col := range idx.ReferencesColumns {
+			if i != 0 {
+				buf.Myprintf(", %v", col.Column)
+			} else {
+				buf.Myprintf("%v", col.Column)
+			}
+		}
+		buf.Myprintf(")")
+
+		if len(idx.ReferencesOption.OnUpdate) > 0 {
+			buf.Myprintf(" ON UPDATE %s", idx.ReferencesOption.OnUpdate)
+		}
+		if len(idx.ReferencesOption.OnDelete) > 0 {
+			buf.Myprintf(" ON DELETE %s", idx.ReferencesOption.OnDelete)
+		}
+	}
 }
 
 // WalkSubtree walks the nodes of the subtree.
@@ -1206,18 +1227,34 @@ func (idx *IndexDefinition) WalkSubtree(visit Visit) error {
 	return nil
 }
 
+//ForeignOption foreign key info.
+type ForeignOption struct {
+	OnUpdate []byte
+	OnDelete []byte
+}
+
+//Merge merge foreign option.
+func (o ForeignOption) Merge(n ForeignOption) ForeignOption {
+	o.OnDelete = append(o.OnDelete, n.OnDelete...)
+	o.OnUpdate = append(o.OnUpdate, n.OnUpdate...)
+	return o
+}
+
 // IndexInfo describes the name and type of an index in a CREATE TABLE statement
 type IndexInfo struct {
 	Type    string
 	Name    ColIdent
 	Primary bool
 	Unique  bool
+	Foreign bool
 }
 
 // Format formats the node.
 func (ii *IndexInfo) Format(buf *TrackedBuffer) {
 	if ii.Primary {
 		buf.Myprintf("%s", ii.Type)
+	} else if ii.Foreign {
+		buf.Myprintf("%s %s Foreign Key", ii.Type, ii.Name.String())
 	} else {
 		buf.Myprintf("%s %v", ii.Type, ii.Name)
 	}

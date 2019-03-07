@@ -26,9 +26,9 @@ import (
 // them as one long string.
 func TestParseNextValid(t *testing.T) {
 	for i, tcase := range validSQL {
-        b := bytes.NewBufferString(tcase.input)
-        tokens := NewTokenizer(b)
-        input := tcase.input + ";"
+		b := bytes.NewBufferString(tcase.input)
+		tokens := NewTokenizer(b)
+		input := tcase.input + ";"
 		want := tcase.output
 		if want == "" {
 			want = tcase.input
@@ -40,7 +40,7 @@ func TestParseNextValid(t *testing.T) {
 			continue
 		}
 
-       // t.Logf("tree:%#v", tree)
+		// t.Logf("tree:%#v", tree)
 
 		if got := String(tree); got != want {
 			t.Fatalf("[%d] ParseNext(%q) = %q, want %q", i, input, got, want)

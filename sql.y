@@ -17,7 +17,6 @@ limitations under the License.
 %{
 package sqlparser
 
-
 func setParseTree(yylex interface{}, stmt Statement) {
   yylex.(*Tokenizer).ParseTree = stmt
 }
@@ -111,6 +110,8 @@ func forceEOF(yylex interface{}) {
   partSpec      *PartitionSpec
   vindexParam   VindexParam
   vindexParams  []VindexParam
+  ForeignOptionList []ForeignOption
+  ForeignOption ForeignOption
 }
 
 %token LEX_ERROR
@@ -154,7 +155,7 @@ func forceEOF(yylex interface{}) {
 
 // DDL Tokens
 %token <bytes> CREATE ALTER DROP RENAME ANALYZE ADD
-%token <bytes> TABLE INDEX VIEW TO IGNORE IF UNIQUE PRIMARY COLUMN CONSTRAINT SPATIAL FULLTEXT FOREIGN
+%token <bytes> TABLE INDEX VIEW TO IGNORE IF UNIQUE PRIMARY COLUMN CONSTRAINT SPATIAL FULLTEXT FOREIGN REFERENCES CASCADE RESTRICT NO ACTION
 %token <bytes> SHOW DESCRIBE EXPLAIN DATE ESCAPE REPAIR OPTIMIZE TRUNCATE
 %token <bytes> MAXVALUE PARTITION REORGANIZE LESS THAN PROCEDURE TRIGGER
 %token <bytes> VINDEX VINDEXES
@@ -280,6 +281,7 @@ func forceEOF(yylex interface{}) {
 %type <str> table_opt_value 
 %type <TableOption> table_option table_option_list
 %type <indexInfo> index_info constraint_index_info
+%type <ForeignOption> foreign_option_list foreign_option
 %type <indexColumn> index_column
 %type <indexColumns> index_column_list
 %type <partDefs> partition_definitions
@@ -289,7 +291,7 @@ func forceEOF(yylex interface{}) {
 %type <vindexParams> vindex_param_list vindex_params_opt
 %type <colIdent> vindex_type vindex_type_opt
 %type <bytes> alter_object_type
-%type <bytes> any_string
+%type <bytes> any_string foreign_action
 
 %start any_command
 
@@ -579,7 +581,7 @@ table_column_list:
 | table_column_list ',' index_definition
   {
     $$.AddIndex($3)
-  }
+  } 
 
 column_definition:
   column_name column_type table_column_opt_list
@@ -883,10 +885,7 @@ zero_fill_opt:
 
 // Null opt returns false to mean NULL (i.e. the default) and true for NOT NULL
 null_opt:
-  {
-    $$ = BoolVal(false)
-  }
-| NULL
+ NULL
   {
     $$ = BoolVal(false)
   }
@@ -896,10 +895,7 @@ null_opt:
   }
 
 column_default_opt:
-  {
-    $$ = nil
-  }
-| DEFAULT STRING
+ DEFAULT STRING
   {
     $$ = NewStrVal($2)
   }
@@ -949,19 +945,13 @@ CURRENT_TIMESTAMP
 
 
 on_update_opt:
-  {
-    $$ = nil
-  }
-| ON UPDATE current_timestamp_opt
+ON UPDATE current_timestamp_opt
 {
   $$ = $3
 }
 
 auto_increment_opt:
-  {
-    $$ = BoolVal(false)
-  }
-| AUTO_INCREMENT
+AUTO_INCREMENT
   {
     $$ = BoolVal(true)
   }
@@ -974,17 +964,33 @@ charset_opt:
   {
     $$ = string($2)
   }
+| CHARSET '=' ID
+  {
+    $$ = string($3)
+  }
 | CHARSET STRING
   {
     $$ = string($2)
+  }
+| CHARSET '=' STRING
+  {
+    $$ = string($3)
   }
 | CHARACTER SET ID
   {
     $$ = string($3)
   }
+| CHARACTER SET '=' ID
+  {
+    $$ = string($4)
+  }
 | CHARACTER SET STRING
   {
     $$ = string($3)
+  }
+| CHARACTER SET '=' STRING
+  {
+    $$ = string($4)
   }
 | CHARACTER SET BINARY
   {
@@ -999,6 +1005,10 @@ collate_opt:
   {
     $$ = string($2)
   }
+| COLLATE '=' ID
+  {
+    $$ = string($3)
+  }
 | COLLATE STRING
   {
     $$ = string($2)
@@ -1009,10 +1019,7 @@ collate_opt:
   }
 
 column_key_opt:
-  {
-    $$ = colKeyNone
-  }
-| PRIMARY KEY
+PRIMARY KEY
   {
     $$ = colKeyPrimary
   }
@@ -1030,10 +1037,7 @@ column_key_opt:
   }
 
 column_comment_opt:
-  {
-    $$ = nil
-  }
-| COMMENT_KEYWORD STRING
+COMMENT_KEYWORD STRING
   {
     $$ = NewStrVal($2)
   }
@@ -1063,25 +1067,79 @@ index_definition:
   {
     $$ = &IndexDefinition{Info: $1, Columns: $3}
   }
+| constraint_index_info '(' index_column_list ')' REFERENCES table_name '(' index_column_list ')' foreign_option_list
+  {
+    $$ = &IndexDefinition{Info: $1, Columns: $3}
+    $$.ReferencesTable = $6
+    $$.ReferencesColumns = $8
+    $$.ReferencesOption = $10
+
+  }
+
 
 constraint_index_info:
     CONSTRAINT ID PRIMARY KEY
     {
-    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("PRIMARY"), Primary: true}
+        $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("PRIMARY"), Primary: true}
     }
     | CONSTRAINT ID UNIQUE 
     {
-    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("UNIQUE"), Unique: true}
+        $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("UNIQUE"), Unique: true}
     }
     | CONSTRAINT ID UNIQUE index_or_key
     {
-    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("UNIQUE"), Unique: true}
+        $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("UNIQUE"), Unique: true}
     }
     | CONSTRAINT ID FOREIGN KEY
     {
-    $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("FOREIGN")}
+        $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Foreign: true}
     }
 
+
+
+foreign_option_list:
+    foreign_option
+    {
+        $$=$1
+    }
+    | foreign_option foreign_option
+    {
+        $$=$1.Merge($2)
+    }
+
+
+foreign_option:
+    ON DELETE foreign_action
+    {
+        $$=ForeignOption{OnUpdate:$3}
+    }
+    | ON UPDATE foreign_action
+    {
+        $$=ForeignOption{OnDelete:$3}
+    }
+
+
+foreign_action:
+    RESTRICT 
+    {
+        $$=$1
+    }
+    | CASCADE 
+    {
+        $$=$1
+    }
+    | SET NULL 
+    {
+        $$=append(append($1, ' '), $2...)
+    }
+    | NO ACTION 
+    {
+        $$=append(append($1, ' '), $2...)
+    }
+    | SET DEFAULT
+    {
+        $$=append(append($1, ' '), $2...)
+    }
 
    
 
@@ -1153,10 +1211,7 @@ index_column:
   }
 
 table_option_list:
-  {
-    $$ = TableOption{}
-  }
- |table_option
+ table_option
   {
     $$ = $1
   }
@@ -1210,6 +1265,10 @@ AUTO_INCREMENT INTEGRAL
 {
     $$ = TableOption{Common:$1}
 }
+| any_string any_string
+{
+    $$ = TableOption{Common:append(append($1, '='), $2...)}
+}
   
 any_string:
     '=' ID 
@@ -1217,6 +1276,10 @@ any_string:
         $$ = $2
     }
     | '=' STRING
+    {
+        $$ = $2 
+    }
+    | '=' INTEGRAL
     {
         $$ = $2 
     }
@@ -2866,8 +2929,7 @@ constraint_opt:
   { $$ = struct{}{} }
 
 using_opt:
-  { $$ = ColIdent{} }
-| USING sql_id
+USING sql_id
   { $$ = $2 }
 
 sql_id:
@@ -3071,6 +3133,7 @@ non_reserved_keyword:
 | START
 | ENGINE
 | STATUS
+| ACTION
 | TEXT
 | THAN
 | TIME

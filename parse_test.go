@@ -19,6 +19,7 @@ package sqlparser
 import (
 	"bytes"
 	"fmt"
+	//"io/ioutil"
 	"strings"
 	"testing"
 )
@@ -826,12 +827,6 @@ var (
 		input:  "create table a (a int, b char, c garbage)",
 		output: "create table a",
 	}, {
-		input:  "create index a on b",
-		output: "alter table b",
-	}, {
-		input:  "create unique index a on b",
-		output: "alter table b",
-	}, {
 		input:  "create unique index a using foo on b",
 		output: "alter table b",
 	}, {
@@ -1181,91 +1176,91 @@ func TestCaseSensitivity(t *testing.T) {
 	validSQL := []struct {
 		input  string
 		output string
-	}{{
-		input:  "create table A (\n\t`B` int\n)",
-		output: "create table A (\n\tB int\n)",
-	}, {
-		input:  "create index b on A",
-		output: "alter table A",
-	}, {
-		input:  "alter table A foo",
-		output: "alter table A",
-	}, {
-		input:  "alter table A convert",
-		output: "alter table A",
-	}, {
-		// View names get lower-cased.
-		input:  "alter view A foo",
-		output: "alter table a",
-	}, {
-		input:  "alter table A rename to B",
-		output: "alter table A",
-	}, {
-		input:  "rename table A to B",
-		output: "rename table A to B",
-	}, {
-		input:  "drop table B",
-		output: "drop table B",
-	}, {
-		input:  "drop table if exists B",
-		output: "drop table if exists B",
-	}, {
-		input:  "drop index b on A",
-		output: "alter table A",
-	}, {
-		input: "select a from B",
-	}, {
-		input: "select A as B from C",
-	}, {
-		input: "select B.* from c",
-	}, {
-		input: "select B.A from c",
-	}, {
-		input: "select * from B as C",
-	}, {
-		input: "select * from A.B",
-	}, {
-		input: "update A set b = 1",
-	}, {
-		input: "update A.B set b = 1",
-	}, {
-		input: "select A() from b",
-	}, {
-		input: "select A(B, C) from b",
-	}, {
-		input: "select A(distinct B, C) from b",
-	}, {
-		// IF is an exception. It's always lower-cased.
-		input:  "select IF(B, C) from b",
-		output: "select if(B, C) from b",
-	}, {
-		input: "select * from b use index (A)",
-	}, {
-		input: "insert into A(A, B) values (1, 2)",
-	}, {
-		input:  "CREATE TABLE A (\n\t`A` int\n)",
-		output: "create table A (\n\tA int\n)",
-	}, {
-		input:  "create view A",
-		output: "create table a",
-	}, {
-		input:  "alter view A",
-		output: "alter table a",
-	}, {
-		input:  "drop view A",
-		output: "drop view a",
-	}, {
-		input:  "drop view if exists A",
-		output: "drop view if exists a",
-	}, {
-		input:  "select /* lock in SHARE MODE */ 1 from t lock in SHARE MODE",
-		output: "select /* lock in SHARE MODE */ 1 from t lock in share mode",
-	}, {
-		input:  "select next VALUE from t",
-		output: "select next 1 values from t",
-	}, {
-		input: "select /* use */ 1 from t1 use index (A) where b = 1",
-	}}
+	}{
+		{input: "create table A (\n\t`B` int\n)",
+			output: "create table A (\n\tB int\n)",
+		}, {
+			input:  "create index b on A",
+			output: "alter table A",
+		}, {
+			input:  "alter table A foo",
+			output: "alter table A",
+		}, {
+			input:  "alter table A convert",
+			output: "alter table A",
+		}, {
+			// View names get lower-cased.
+			input:  "alter view A foo",
+			output: "alter table a",
+		}, {
+			input:  "alter table A rename to B",
+			output: "alter table A",
+		}, {
+			input:  "rename table A to B",
+			output: "rename table A to B",
+		}, {
+			input:  "drop table B",
+			output: "drop table B",
+		}, {
+			input:  "drop table if exists B",
+			output: "drop table if exists B",
+		}, {
+			input:  "drop index b on A",
+			output: "alter table A",
+		}, {
+			input: "select a from B",
+		}, {
+			input: "select A as B from C",
+		}, {
+			input: "select B.* from c",
+		}, {
+			input: "select B.A from c",
+		}, {
+			input: "select * from B as C",
+		}, {
+			input: "select * from A.B",
+		}, {
+			input: "update A set b = 1",
+		}, {
+			input: "update A.B set b = 1",
+		}, {
+			input: "select A() from b",
+		}, {
+			input: "select A(B, C) from b",
+		}, {
+			input: "select A(distinct B, C) from b",
+		}, {
+			// IF is an exception. It's always lower-cased.
+			input:  "select IF(B, C) from b",
+			output: "select if(B, C) from b",
+		}, {
+			input: "select * from b use index (A)",
+		}, {
+			input: "insert into A(A, B) values (1, 2)",
+		}, {
+			input:  "CREATE TABLE A (\n\t`A` int\n)",
+			output: "create table A (\n\tA int\n)",
+		}, {
+			input:  "create view A",
+			output: "create table a",
+		}, {
+			input:  "alter view A",
+			output: "alter table a",
+		}, {
+			input:  "drop view A",
+			output: "drop view a",
+		}, {
+			input:  "drop view if exists A",
+			output: "drop view if exists a",
+		}, {
+			input:  "select /* lock in SHARE MODE */ 1 from t lock in SHARE MODE",
+			output: "select /* lock in SHARE MODE */ 1 from t lock in share mode",
+		}, {
+			input:  "select next VALUE from t",
+			output: "select next 1 values from t",
+		}, {
+			input: "select /* use */ 1 from t1 use index (A) where b = 1",
+		}}
 	for _, tcase := range validSQL {
 		if tcase.output == "" {
 			tcase.output = tcase.input
@@ -1279,6 +1274,7 @@ func TestCaseSensitivity(t *testing.T) {
 		if out != tcase.output {
 			t.Errorf("out: %s, want %s", out, tcase.output)
 		}
+		break
 	}
 }
 
@@ -1833,3 +1829,58 @@ func BenchmarkParse3(b *testing.B) {
 		}
 	}
 }
+
+/*
+func TestCreateTableLocal(t *testing.T) {
+	buf, err := ioutil.ReadFile("./create_table.sql")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	for i, line := range strings.Split(string(buf), "\n") {
+		n := strings.ReplaceAll(line, "\\t", "\t")
+		n = strings.ReplaceAll(n, "\\n", "\n")
+		n = strings.ReplaceAll(n, "\\r", "\r")
+        if n == "" {
+            continue
+        }
+
+		s, err := Parse(n)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		ddl := s.(*DDL)
+
+        if !ddl.LikeTable.Name.IsEmpty() {
+            continue
+        }
+
+		if ddl.TableSpec == nil {
+			t.Fatalf("%v table spec is nil, sql:\n%s\n", i, n)
+		}
+	}
+}
+
+func TestCreateTableOne(t *testing.T) {
+	buf, err := ioutil.ReadFile("./test.sql")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	s, err := Parse(string(buf))
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	ddl := s.(*DDL)
+	fmt.Printf("ddl:%#v\n", ddl)
+	if ddl.TableSpec == nil {
+		t.Fatalf("table spec is nil")
+	}
+
+    b3 := NewTrackedBuffer(nil)
+    ddl.Format(b3)
+
+	t.Logf("%v\n", b3.String())
+}
+*/
