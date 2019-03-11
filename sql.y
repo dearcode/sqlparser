@@ -1080,19 +1080,19 @@ index_definition:
 constraint_index_info:
     CONSTRAINT ID PRIMARY KEY
     {
-        $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("PRIMARY"), Primary: true}
+        $$ = &IndexInfo{Type: "PRIMARY", Name: NewColIdent(string($2)), Primary: true}
     }
     | CONSTRAINT ID UNIQUE 
     {
-        $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("UNIQUE"), Unique: true}
+        $$ = &IndexInfo{Type:"UNIQUE", Name: NewColIdent(string($2)), Unique: true}
     }
     | CONSTRAINT ID UNIQUE index_or_key
     {
-        $$ = &IndexInfo{Type: string($1) + " " + string($2), Name: NewColIdent("UNIQUE"), Unique: true}
+        $$ = &IndexInfo{Type: "UNIQUE", Name: NewColIdent(string($2)), Unique: true}
     }
     | CONSTRAINT ID FOREIGN KEY
     {
-        $$ = &IndexInfo{Type: string($1), Name: NewColIdent(string($2)), Foreign: true}
+        $$ = &IndexInfo{Type: "FOREIGN", Name: NewColIdent(string($2)), Foreign: true}
     }
 
 
@@ -2208,6 +2208,10 @@ value_expression:
   {
     $$ = &BinaryExpr{Left: $1, Operator: MinusStr, Right: $3}
   }
+| value_expression INTEGRAL
+  {
+    $$ = &BinaryExpr{Left: $1, Operator: MinusStr, Right: NewIntVal($2)}
+  }
 | value_expression '*' value_expression
   {
     $$ = &BinaryExpr{Left: $1, Operator: MultStr, Right: $3}
@@ -2384,6 +2388,10 @@ function_call_nonkeyword:
 | LOCALTIME func_datetime_precision_opt
   {
     $$ = &FuncExpr{Name:NewColIdent("localtime")}
+  }
+| NOW func_datetime_precision_opt
+  {
+    $$ = &FuncExpr{Name:NewColIdent("now")}
   }
   // now
 | LOCALTIMESTAMP func_datetime_precision_opt
