@@ -152,6 +152,7 @@ var keywords = map[string]int{
 	"double":              DOUBLE,
 	"precision":           UNUSED,
 	"drop":                DROP,
+	"modify":              MODIFY,
 	"duplicate":           DUPLICATE,
 	"each":                UNUSED,
 	"else":                ELSE,

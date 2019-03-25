@@ -154,7 +154,7 @@ func forceEOF(yylex interface{}) {
 %token <empty> JSON_EXTRACT_OP JSON_UNQUOTE_EXTRACT_OP
 
 // DDL Tokens
-%token <bytes> CREATE ALTER DROP RENAME ANALYZE ADD
+%token <bytes> CREATE ALTER DROP RENAME ANALYZE ADD MODIFY
 %token <bytes> TABLE INDEX VIEW TO IGNORE IF UNIQUE PRIMARY COLUMN CONSTRAINT SPATIAL FULLTEXT FOREIGN REFERENCES CASCADE RESTRICT NO ACTION
 %token <bytes> SHOW DESCRIBE EXPLAIN DATE ESCAPE REPAIR OPTIMIZE TRUNCATE
 %token <bytes> MAXVALUE PARTITION REORGANIZE LESS THAN PROCEDURE TRIGGER
@@ -1321,6 +1321,10 @@ alter_statement:
     $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
 | ALTER ignore_opt TABLE table_name ADD alter_object_type force_eof
+  {
+    $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
+  }
+| ALTER ignore_opt TABLE table_name MODIFY alter_object_type force_eof
   {
     $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
