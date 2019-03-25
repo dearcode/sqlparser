@@ -613,6 +613,7 @@ type DDL struct {
 	PartitionSpec *PartitionSpec
 	VindexSpec    *VindexSpec
 	VindexCols    []ColIdent
+	Option        TableOption
 }
 
 // DDL strings.

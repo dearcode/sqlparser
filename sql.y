@@ -1365,6 +1365,10 @@ alter_statement:
   {
     $$ = &DDL{Action: AlterTableStr, Table: $3.ToViewName(), NewName: $3.ToViewName()}
   }
+| ALTER ignore_opt TABLE table_name table_option
+  {
+    $$ = &DDL{Action: AlterTableStr, Table: $4, Option: $5}
+  }
 | ALTER ignore_opt TABLE table_name partition_operation
   {
     $$ = &DDL{Action: AlterTableStr, Table: $4, PartitionSpec: $5}
