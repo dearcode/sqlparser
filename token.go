@@ -108,7 +108,7 @@ var keywords = map[string]int{
 	"call":                UNUSED,
 	"case":                CASE,
 	"cast":                CAST,
-	"change":              UNUSED,
+	"change":              CHANGE,
 	"char":                CHAR,
 	"character":           CHARACTER,
 	"charset":             CHARSET,
