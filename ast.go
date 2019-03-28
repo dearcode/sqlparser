@@ -24,6 +24,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"unicode"
 
 	log "github.com/golang/glog"
 
