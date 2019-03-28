@@ -99,6 +99,23 @@ func ParseNext(tokenizer *Tokenizer) (Statement, error) {
 	return tokenizer.ParseTree, nil
 }
 
+// Split 直接拆分成数组.
+func Split(blob string) (stmts []string, err error) {
+	tokenizer := NewStringTokenizer(blob)
+	var idx int
+
+	for tkn := 1; tkn != 0 && tkn != eofChar; {
+		if tkn, _ = tokenizer.Scan(); tkn == ';' {
+			stmts = append(stmts, blob[idx:tokenizer.Position-2])
+			for idx = tokenizer.Position - 1; idx < len(blob) && unicode.IsSpace(rune(blob[idx])); idx++ {
+			}
+		}
+	}
+
+	err = tokenizer.LastError
+	return
+}
+
 // SplitStatement returns the first sql statement up to either a ; or EOF
 // and the remainder from the given buffer
 func SplitStatement(blob string) (string, string, error) {
