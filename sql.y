@@ -957,10 +957,7 @@ AUTO_INCREMENT
   }
 
 charset_opt:
-  {
-    $$ = ""
-  }
-| CHARSET ID
+CHARSET ID
   {
     $$ = string($2)
   }
@@ -998,10 +995,7 @@ charset_opt:
   }
 
 collate_opt:
-  {
-    $$ = ""
-  }
-| COLLATE ID
+COLLATE ID
   {
     $$ = string($2)
   }
@@ -1211,7 +1205,10 @@ index_column:
   }
 
 table_option_list:
- table_option
+  {
+    $$ = TableOption{}
+  }
+ | table_option
   {
     $$ = $1
   }
@@ -1320,6 +1317,10 @@ alter_statement:
   {
     $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
   }
+| ALTER ignore_opt TABLE table_name ADD UNIQUE alter_object_type force_eof
+  {
+    $$ = &DDL{Action: AlterTableStr, Unique: true, Table: $4, NewName: $4}
+  }
 | ALTER ignore_opt TABLE table_name ADD alter_object_type force_eof
   {
     $$ = &DDL{Action: AlterTableStr, Table: $4, NewName: $4}
@@ -1373,7 +1374,7 @@ alter_statement:
   {
     $$ = &DDL{Action: AlterTableStr, Table: $3.ToViewName(), NewName: $3.ToViewName()}
   }
-| ALTER ignore_opt TABLE table_name table_option
+| ALTER ignore_opt TABLE table_name table_option_list
   {
     $$ = &DDL{Action: AlterTableStr, Table: $4, Option: $5}
   }
@@ -2925,7 +2926,7 @@ non_add_drop_or_rename_operation:
   { $$ = struct{}{} }
 | UNUSED
   { $$ = struct{}{} }
-| ID
+| COLLATE
   { $$ = struct{}{} }
 
 to_opt:

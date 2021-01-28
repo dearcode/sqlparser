@@ -626,6 +626,7 @@ type DDL struct {
 	Table         TableName
 	NewName       TableName
 	IfExists      bool
+	Unique        bool
 	LikeTable     TableName
 	TableSpec     *TableSpec
 	PartitionSpec *PartitionSpec
